@@ -25,29 +25,23 @@
     require([
       "esri/tasks/support/Query",
       "esri/renderers/smartMapping/creators/color",
-      "esri/renderers/smartMapping/creators/size",
       "esri/layers/FeatureLayer",
       "esri/views/MapView",
       "esri/Map",
       "dojo/domReady!"
-    ], function (Query, colorRendererCreator, sizeRendererCreator, FeatureLayer, MapView, Map) {
+    ], function (Query, colorRendererCreator, FeatureLayer, MapView, Map) {
 
       // create webmap instance
       var map = new Map({
         basemap: 'dark-gray'
       });
 
-      // scale visibility breakpoints as variables
-      var polygonMinScale = 1000000;
-
       // create a feature layer for the zip code feature service
       var layerZip = new FeatureLayer({
         portalItem: {
           id: "cb9810a3d5ce476b9b121e4a07445f3a"
         },
-        outFields: ["*"],
-        opacity: 0,
-        minScale: polygonMinScale
+        outFields: ["*"]
       });
 
       // create a feature layer for the block group feature service
@@ -55,24 +49,12 @@
         portalItem: {
           id: "1c0395d909e74a08ba7c8c76172d9dea"
         },
-        outFields: ["*"],
-        minScale: polygonMinScale
-      });
-
-      // create a feature layer for the zip code centroid feature class
-      var layerZipCentroid = new FeatureLayer({
-        portalItem: {
-          id: "bba309abe903402abf1addd9cb02d829"
-        },
-        outFields: ["*"],
-        opacity: 1,
-        maxScale: polygonMinScale
+        outFields: ["*"]
       });
 
       // add the feature layers to the map
       map.add(layerZip);
       map.add(layerBlockGroup);
-      map.add(layerZipCentroid);
 
       // create a view and populate it with the webmap
       var mapView = new MapView({
@@ -115,17 +97,6 @@
 
             // set the layer to be visible with 50% opacity/transparency
             layerZip.opacity = 0.5;
-
-            // when the promise resolves, apply a continuous color renderer to the zip code layer
-            sizeRendererCreator.createContinuousRenderer({
-              layer: layerZipCentroid,
-              basemap: map.basemap,
-              field: fieldNameBlockGroup,
-              symbolType: "2d",
-              defaultSymbolEnabled: false
-            }).then(function (response) {
-              layerZip.renderer = response.renderer;
-            });  // close color renderer creator
 
           });  // close then block group query features
 
