@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>MasterCard Feeder Map Demo</title>
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.3/esri/css/main.css">
+
+  <script src="https://js.arcgis.com/4.3/"></script>
+
+  <script>
+
+    require([
+      "esri/tasks/support/Query",
+      "esri/renderers/smartMapping/creators/color",
+      "esri/renderers/smartMapping/creators/size",
+      "esri/layers/FeatureLayer",
+      "esri/views/MapView",
+      "esri/Map",
+      "dojo/domReady!"
+    ], function (Query, colorRendererCreator, sizeRendererCreator, FeatureLayer, MapView, Map) {
+
+      // create webmap instance
+      var map = new Map({
+        basemap: 'dark-gray'
+      });
+
+      // scale visibility breakpoints as variables
+      var polygonMinScale = 1000000;
+
+      // create a feature layer for the zip code feature service
+      var layerZip = new FeatureLayer({
+        portalItem: {
+          id: "cb9810a3d5ce476b9b121e4a07445f3a"
+        },
+        outFields: ["*"],
+        opacity: 0,
+        minScale: polygonMinScale
+      });
+
+      // create a feature layer for the block group feature service
+      var layerBlockGroup = new FeatureLayer({
+        portalItem: {
+          id: "1c0395d909e74a08ba7c8c76172d9dea"
+        },
+        outFields: ["*"],
+        minScale: polygonMinScale
+      });
+
+      // create a feature layer for the zip code centroid feature class
+      var layerZipCentroid = new FeatureLayer({
+        portalItem: {
+          id: "bba309abe903402abf1addd9cb02d829"
+        },
+        outFields: ["*"],
+        opacity: 1,
+        maxScale: polygonMinScale
+      });
+
+      // add the feature layers to the map
+      map.add(layerZip);
+      map.add(layerBlockGroup);
+      map.add(layerZipCentroid);
+
+      // create a view and populate it with the webmap
+      var mapView = new MapView({
+        map: map,
+        container: "viewDiv"
+      });
+
+      // once the zip code layer loads, zoom the view to the layer
+      layerBlockGroup.then(function () {
+        mapView.extent = layerBlockGroup.fullExtent;
+      });
+
+      // event listener for map view click event
+      mapView.on("click", function (event) {
+
+        // keep other click events from propagating
+        event.stopPropagation();
+
+        // create a query with the map point geometry from the map view click event
+        var query = new Query();
+        query.geometry = event.mapPoint;
+
+        // use the query to query the block group layer
+        layerBlockGroup.queryFeatures(query)
+          .then(function (results) {
+
+            // access the attributes of the intersecting feature and concatenate to identify published block group field name
+            var fieldNameBlockGroup = "F" + results.features[0].attributes.ID;
+
+            // when the promise resolves, apply a continuous color renderer to the zip code layer
+            colorRendererCreator.createContinuousRenderer({
+              layer: layerZip,
+              basemap: map.basemap,
+              field: fieldNameBlockGroup,
+              theme: "above-and-below",
+              defaultSymbolEnabled: false
+            }).then(function (response) {
+              layerZip.renderer = response.renderer;
+            });  // close color renderer creator
+
+            // set the layer to be visible with 50% opacity/transparency
+            layerZip.opacity = 0.5;
+
+            // when the promise resolves, apply a continuous color renderer to the zip code layer
+            sizeRendererCreator.createContinuousRenderer({
+              layer: layerZipCentroid,
+              basemap: map.basemap,
+              field: fieldNameBlockGroup,
+              symbolType: "2d",
+              defaultSymbolEnabled: false
+            }).then(function (response) {
+              layerZip.renderer = response.renderer;
+            });  // close color renderer creator
+
+          });  // close then block group query features
+
+      });  // close map view on click
+
+    });  // close require
+  </script>
+</head>
+
+<body>
+<div id="viewDiv"></div>
+</body>
+
+</html>
